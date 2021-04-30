@@ -4,7 +4,7 @@ import { MongoClient } from 'mongodb';
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 const withDB = async (operations, res) => {
     try {
@@ -19,6 +19,14 @@ const withDB = async (operations, res) => {
         res.status(500).json({ message: 'Error connecting to db', error });
     }
 }
+
+app.get('/api/articles/', async (req, res) => {
+    withDB(async (db) => {
+     
+        const articleInfo = await db.collection('articles').find().pretty();
+        res.status(200).json(articleInfo);
+    }, res);
+})
 
 app.get('/api/articles/:name', async (req, res) => {
     withDB(async (db) => {
@@ -62,5 +70,20 @@ app.post('/api/articles/:name/add-comment', (req, res) => {
     }, res);
 });
 
+app.delete('/api/articles/:name/upvote', async (req, res) => {
+    withDB(async (db) => {
+        const articleName = req.params.name;
+    
+        const articleInfo = await db.collection('articles').findOne({ name: articleName });
+        await db.collection('articles').updateOne({ name: articleName }, {
+            '$set': {
+                upvotes: 0,
+            },
+        });
+        const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
+    
+        res.status(200).json(updatedArticleInfo);
+    }, res);
+});
 
 app.listen(8000, () => console.log('Listening on port 8000'));
