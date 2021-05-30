@@ -1,102 +1,96 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { MongoClient } from 'mongodb';
+// import path from 'path';
 
 const app = express();
 
 app.use(express.json());
+// app.use(bodyParser.json());
 
-const withDB = async (operations, res) => {
+const withDB = async (operations) => {
     try {
-        // useNewUrlParser
         const client = await MongoClient.connect('mongodb://localhost:27017', { useNewUrlParser: true, useUnifiedTopology: true });
         const db = client.db('my-blog');
     
         await operations(db);
     
         client.close();
-    } catch (error) {
-        res.status(500).json({ message: 'Error connecting to db', error });
+    } catch (err) {
+        res.status(500).send({ message: 'Database Error!', err });
     }
 }
 
-app.get('/api/articles/', async (req, res) => {
-    withDB(async (db) => {
-     
+app.get('api/articles', async (req, res) => {
+    await withDB(async (db) => {
         const articleInfo = await db.collection('articles').find().pretty();
         res.status(200).json(articleInfo);
-    }, res);
+    });
 })
 
 app.get('/api/articles/:name', async (req, res) => {
-    withDB(async (db) => {
-        const articleName = req.params.name;
+    const articleName = req.params.name;
 
-        const articleInfo = await db.collection('articles').findOne({ name: articleName })
+    await withDB(async (db) => {
+        const articleInfo = await db.collection('articles').findOne({ name: articleName });
         res.status(200).json(articleInfo);
-    }, res);
+    });
 })
 
-app.get('/api/articles/:id', async (req, res) => {
-    withDB(async (db) => {
-        const articleId = req.params.id;
-        //console.log(req.params.id);
+// app.get('/api/articles/:id', async (req, res) => {
+//     withDB(async (db) => {
+//         const articleId = req.params.id;
 
-
-        const articleInfo = await db.collection('articles').findOne({ _id: articleId });
-        res.status(200).json(articleInfo);
-    }, res);
-})
+//         const articleInfo = await db.collection('articles').findOne({ _id: articleId });
+//         res.status(200).json(articleInfo);
+//     }, res);
+// })
 
 app.post('/api/articles/:name/upvote', async (req, res) => {
-    withDB(async (db) => {
-        const articleName = req.params.name;
-    
+    const articleName = req.params.name;
+
+    await withDB(async (db) => {
         const articleInfo = await db.collection('articles').findOne({ name: articleName });
         await db.collection('articles').updateOne({ name: articleName }, {
             '$set': {
                 upvotes: articleInfo.upvotes + 1,
-            },
+            }
         });
         const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
-    
         res.status(200).json(updatedArticleInfo);
-    }, res);
+    });
 });
 
-app.post('/api/articles/:name/add-comment', (req, res) => {
-    const { username, text } = req.body;
+app.post('/api/articles/:name/add-comment', async (req, res) => {
+    const newComment  = req.body.comment;
     const articleName = req.params.name;
 
-    withDB(async (db) => {
+    await withDB(async (db) => {
         const articleInfo = await db.collection('articles').findOne({ name: articleName });
         await db.collection('articles').updateOne({ name: articleName }, {
             '$set': {
-                comments: articleInfo.comments.concat({ username, text }),
-            },
+                comments: articleInfo.comments.concat({ newComment }),
+            }
         });
         const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
-
         res.status(200).json(updatedArticleInfo);
     }, res);
 });
 
-app.delete('/api/articles/:name/upvote', async (req, res) => {
-    withDB(async (db) => {
-        const articleName = req.params.name;
+// app.delete('/api/articles/:name/upvote', async (req, res) => {
+//     withDB(async (db) => {
+//         const articleName = req.params.name;
     
-        const articleInfo = await db.collection('articles').findOne({ name: articleName });
-        await db.collection('articles').updateOne({ name: articleName }, {
-            '$set': {
-                upvotes: 0,
-            },
-        });
-        const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
+//         const articleInfo = await db.collection('articles').findOne({ name: articleName });
+//         await db.collection('articles').updateOne({ name: articleName }, {
+//             '$set': {
+//                 upvotes: 0,
+//             },
+//         });
+//         const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
     
-        res.status(200).json(updatedArticleInfo);
-    }, res);
-});
-
-
+//         res.status(200).json(updatedArticleInfo);
+//     }, res);
+// });
 
 app.listen(9000, () => console.log('Listening on port 9000'));
