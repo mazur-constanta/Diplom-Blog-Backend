@@ -1,9 +1,12 @@
 import express from 'express';
+import bodyParser from 'body-parser';
 import { MongoClient } from 'mongodb';
+import path from 'path';
 
 const app = express();
 
 app.use(express.json());
+app.use(bodyParser.json());
 
 const withDB = async (operations) => {
     try {
@@ -28,11 +31,11 @@ const withDB = async (operations) => {
 app.get('/api/articles/:name', async (req, res) => {
     const articleName = req.params.name;
 
-    await withDB(async (db) => {
+    await withDB(async db => {
         const articleInfo = await db.collection('articles').findOne({ name: articleName });
         res.status(200).json(articleInfo);
     });
-})
+});
 
 // app.get('/api/articles/:id', async (req, res) => {
 //     withDB(async (db) => {
@@ -46,7 +49,7 @@ app.get('/api/articles/:name', async (req, res) => {
 app.post('/api/articles/:name/upvote', async (req, res) => {
     const articleName = req.params.name;
 
-    await withDB(async (db) => {
+    await withDB(async db => {
         const articleInfo = await db.collection('articles').findOne({ name: articleName });
         await db.collection('articles').updateOne({ name: articleName }, {
             '$set': {
@@ -59,14 +62,14 @@ app.post('/api/articles/:name/upvote', async (req, res) => {
 });
 
 app.post('/api/articles/:name/add-comment', async (req, res) => {
-    const newComment  = req.body.comment;
     const articleName = req.params.name;
+    const newComment  = req.body.comment;
 
     await withDB(async (db) => {
         const articleInfo = await db.collection('articles').findOne({ name: articleName });
         await db.collection('articles').updateOne({ name: articleName }, {
             '$set': {
-                comments: articleInfo.comments.concat({ newComment }),
+                comments: articleInfo.comments.concat(newComment),
             }
         });
         const updatedArticleInfo = await db.collection('articles').findOne({ name: articleName });
