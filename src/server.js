@@ -1,11 +1,9 @@
 import express from 'express';
-// import bodyParser from 'body-parser';
 import { MongoClient } from 'mongodb';
 
 const app = express();
 
 app.use(express.json());
-// app.use(bodyParser.json());
 
 const withDB = async (operations) => {
     try {
